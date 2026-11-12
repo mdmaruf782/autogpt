@@ -1,9 +1,7 @@
-# Ep2 Gedik Ahmed Pasha — বাকি ছবির প্রম্পট (ChatGPT, একই চ্যাটে)
+# Sample prompts (project-wise bulk import format)
 
-নিয়ম: আগের চ্যাটেই (Gedik পোর্ট্রেট + style lock দেওয়া) এক এক করে পেস্ট করো। যেখানে 'Gedik exactly as in the attached portrait' আছে সেখানে রেফারেন্স ছবি চ্যাটে আগে থেকেই আছে।
-ডাউনলোড করে নাম দাও: দৃশ্যের আইডি.png (যেমন R5.png)
-
-ক্লিপ হবে (Flow-তে ভিডিও): R2, K2, K3, V3, O2, O3 (ওয়াইড/অ্যাকশন, মুখ ক্লোজ-আপ নয়)
+Format: each prompt starts with a "## ID" heading, followed by the prompt text.
+The scene number in the prompt ("SCENE R5:") is used as the image file name.
 
 ---
 

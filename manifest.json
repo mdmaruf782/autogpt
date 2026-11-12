@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ChatGPT Bulk Image Prompter",
-  "version": "1.6.0",
+  "version": "1.6.2",
   "description": "Bulk import prompts (project-wise) and auto-submit them one by one in ChatGPT for image generation, with auto-download.",
   "permissions": [
     "storage",

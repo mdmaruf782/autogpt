@@ -2,7 +2,7 @@
   if (window.__bpiLoaded) return;
   window.__bpiLoaded = true;
 
-  // ChatGPT DOM বদলালে শুধু এই selector গুলো ঠিক করলেই হবে
+  // If ChatGPT's DOM changes, only these selectors need updating
   const CFG = {
     editor: ['#prompt-textarea', 'div.ProseMirror[contenteditable="true"]', 'textarea[name="prompt-textarea"]'],
     send: ['button[data-testid="send-button"]', 'button[aria-label="Send"]', 'button[aria-label="Send prompt"]', 'button[aria-label="Send message"]'],
@@ -122,13 +122,13 @@ input[type=checkbox]:checked{background:var(--pri)}input[type=checkbox]:checked:
 <div id="panel">
   <div class="hd">
     <div style="padding-top:2px">${ic('image', 18)}</div>
-    <div><div class="t1">Bulk Image Prompter</div><div class="t2">ChatGPT-তে প্রম্পট কিউ করে অটো জেনারেট</div></div>
+    <div><div class="t1">Bulk Image Prompter</div><div class="t2">Queue prompts and auto-generate images in ChatGPT</div></div>
     <div class="sp"></div>
     <button id="theme" class="btn ghost xs" title="Dark / Light">${ic('sun')}</button><button id="close" class="btn ghost xs" title="Close">${ic('x')}</button>
   </div>
   <div class="plat">
     <button class="pl on" data-plat="chatgpt">ChatGPT</button>
-    <button class="pl" data-plat="flow" disabled title="Google Flow সাপোর্ট আসছে">Google Flow <span class="badge">Coming soon</span></button>
+    <button class="pl" data-plat="flow" disabled title="Google Flow support is coming">Google Flow <span class="badge">Coming soon</span></button>
   </div>
   <div class="tabs">
     <button class="tt on" data-tab="queue">Queue</button><button class="tt" data-tab="project">Project</button>
@@ -141,81 +141,81 @@ input[type=checkbox]:checked{background:var(--pri)}input[type=checkbox]:checked:
       <div class="ctl">
         <button id="start" class="btn default">${ic('play')}Start</button>
         <button id="pause" class="btn secondary">${ic('pause')}Pause</button>
-        <button id="skip" class="btn outline" title="ছবি এসে গেছে/আটকে আছে — এখনই পরেরটায় যাও">${ic('skip')}Done/Skip</button>
+        <button id="skip" class="btn outline" title="Image is ready or stuck — move on to the next prompt now">${ic('skip')}Done/Skip</button>
         <button id="retry" class="btn outline">${ic('retry')}Retry errors</button>
         <button id="reset" class="btn outline">${ic('reset')}Reset</button>
       </div>
-      <div id="mon">মনিটর: নিষ্ক্রিয়</div>
+      <div id="mon">Monitor: idle</div>
       <div id="list"></div>
     </div>
 
     <div class="tp" data-pane="project" hidden>
       <label class="l" style="margin-top:0">Project</label>
-      <div class="row"><select id="projSel"></select><button id="newProj" class="btn outline icon" title="নতুন প্রজেক্ট">${ic('plus')}</button><button id="delProj" class="btn destructive icon" title="ডিলিট">${ic('trash')}</button></div>
-      <label class="l">Name <span class="hint">(ডাউনলোড ফোল্ডারও এটাই)</span></label>
+      <div class="row"><select id="projSel"></select><button id="newProj" class="btn outline icon" title="New project">${ic('plus')}</button><button id="delProj" class="btn destructive icon" title="Delete">${ic('trash')}</button></div>
+      <label class="l">Name <span class="hint">(also used as the download folder name)</span></label>
       <input id="projName" class="input" placeholder="Project name">
-      <label class="l">Chat / Project URL <span class="hint">(ঐচ্ছিক)</span></label>
-      <div class="row"><input id="targetUrl" class="input" placeholder="https://chatgpt.com/c/…"><button id="useUrl" class="btn outline icon" title="এখনকার চ্যাটের URL বসাও">${ic('pin')}</button></div>
-      <div class="hint" style="margin-top:4px">Start দিলে অটো এই চ্যাটে যাবে (portrait + style lock যে চ্যাটে আছে)।</div>
+      <label class="l">Chat / Project URL <span class="hint">(optional)</span></label>
+      <div class="row"><input id="targetUrl" class="input" placeholder="https://chatgpt.com/c/…"><button id="useUrl" class="btn outline icon" title="Use the current chat URL">${ic('pin')}</button></div>
+      <div class="hint" style="margin-top:4px">On Start, the extension opens this chat first (use the chat that already has your portrait and style lock).</div>
       <label class="l">Prefix</label>
-      <textarea id="prefix" rows="2" placeholder="প্রতিটি প্রম্পটের আগে বসবে"></textarea>
+      <textarea id="prefix" rows="2" placeholder="Text added before every prompt"></textarea>
       <label class="l">Suffix</label>
-      <textarea id="suffix" rows="2" placeholder="প্রতিটি প্রম্পটের পরে বসবে"></textarea>
+      <textarea id="suffix" rows="2" placeholder="Text added after every prompt"></textarea>
     </div>
 
     <div class="tp" data-pane="import" hidden>
-      <div class="hint">ফরম্যাট: <code>## ID</code> হেডিংয়ের নিচে প্রম্পট (md) · JSON · CSV <code>id,prompt</code> · <code>---</code>/ফাঁকা লাইনে আলাদা ব্লক।</div>
+      <div class="hint">Formats: <code>## ID</code> heading with the prompt below (md) · JSON · CSV <code>id,prompt</code> · blocks separated by <code>---</code> or blank lines.</div>
       <pre>## R5
 SCENE R5: A grand divan chamber ...
 
 ## R6
 SCENE R6: A council of viziers ...</pre>
       <input type="file" id="file" accept=".md,.txt,.csv,.json">
-      <label class="l">অথবা পেস্ট করো</label>
+      <label class="l">Or paste here</label>
       <textarea id="paste" rows="6" placeholder="## ID&#10;prompt…"></textarea>
       <div class="ctl" style="margin-top:10px">
-        <button id="impNew" class="btn default">${ic('upload')}নতুন প্রজেক্ট হিসেবে</button>
-        <button id="impAdd" class="btn secondary">বর্তমান প্রজেক্টে যোগ</button>
+        <button id="impNew" class="btn default">${ic('upload')}Import as new project</button>
+        <button id="impAdd" class="btn secondary">Add to current project</button>
         <button id="sample" class="btn ghost">Sample</button>
       </div>
     </div>
 
     <div class="tp" data-pane="download" hidden>
-      <label class="l" style="margin-top:0">ছবি কোথায় সেভ হবে</label>
+      <label class="l" style="margin-top:0">Where to save images</label>
       <div class="plat" style="margin:0 0 4px">
-        <button class="pl on" data-dest="downloads">Downloads ফোল্ডার</button>
-        <button class="pl" data-dest="picker">ফোল্ডার বেছে নাও…</button>
+        <button class="pl on" data-dest="downloads">Downloads folder</button>
+        <button class="pl" data-dest="picker">Choose a folder…</button>
       </div>
       <div id="destDl">
-        <label class="l">Downloads-এর ভেতরে সাব-ফোল্ডারের নাম</label>
+        <label class="l">Sub-folder name inside Downloads</label>
         <input id="dlRoot" class="input" placeholder="ChatGPT-Bulk">
       </div>
       <div id="destPk" hidden>
-        <label class="l">নির্বাচিত ফোল্ডার</label>
-        <div class="row"><input id="pkName" class="input" readonly placeholder="কোনো ফোল্ডার সিলেক্ট করা নেই"><button id="pickBtn" class="btn outline">Choose…</button></div>
-        <div class="hint" style="margin-top:4px">Downloads/Desktop/Documents-এর মূল ফোল্ডার Chrome বেছে নিতে দেয় না — তার ভেতরে একটা নতুন ফোল্ডার বানিয়ে সেটা বাছো। Chrome ব্রাউজার রিস্টার্টের পর permission আবার চাইতে পারে (Start চাপলেই চাইবে)।</div>
+        <label class="l">Selected folder</label>
+        <div class="row"><input id="pkName" class="input" readonly placeholder="No folder selected"><button id="pickBtn" class="btn outline">Choose…</button></div>
+        <div class="hint" style="margin-top:4px">Chrome does not allow picking the top-level Downloads, Desktop or Documents folder — create a new folder inside one and pick that. After restarting Chrome, permission may be requested again (pressing Start will ask).</div>
       </div>
-      <div class="sw" style="margin-top:10px"><span>অটো ডাউনলোড<small>প্রতিটি ছবি শেষ হলে সেভ</small></span><input type="checkbox" id="sDl"></div>
-      <div class="sw"><span>প্রজেক্টের নামে সাব-ফোল্ডার<small>…/প্রজেক্ট/R5.png</small></span><input type="checkbox" id="sProj"></div>
-      <div class="sw"><span>সিরিয়াল prefix<small>01_R5.png — বন্ধ থাকলে শুধু R5.png</small></span><input type="checkbox" id="sSer"></div>
-      <div class="hint" style="margin-top:8px">ফাইলের নাম: প্রম্পটের <code>SCENE R5:</code> থেকে scene নম্বর (R5)। প্রম্পটে scene নম্বর না থাকলে প্রম্পটের সিরিয়াল (01, 02…)। একই নাম থাকলে _2, _3 যোগ হয়।</div>
+      <div class="sw" style="margin-top:10px"><span>Auto download<small>Save each image when it finishes</small></span><input type="checkbox" id="sDl"></div>
+      <div class="sw"><span>Project sub-folder<small>…/project/R5.png</small></span><input type="checkbox" id="sProj"></div>
+      <div class="sw"><span>Serial prefix<small>01_R5.png — off gives just R5.png</small></span><input type="checkbox" id="sSer"></div>
+      <div class="hint" style="margin-top:8px">File name: the scene number from the prompt (<code>SCENE R5:</code> → R5). If the prompt has no scene number, the prompt's serial number (01, 02…) is used. Duplicate names get _2, _3.</div>
       <div class="sep"></div>
-      <button id="dlAll" class="btn secondary" style="width:100%">⬇ এই চ্যাটের সব generated ছবি ডাউনলোড</button>
-      <div class="hint" style="margin-top:4px">চ্যাটে যে ছবিগুলো এখন পেজে লোড আছে সেগুলোই নামবে — লম্বা চ্যাট হলে আগে উপরে স্ক্রল করে সব লোড করো।</div>
+      <button id="dlAll" class="btn secondary" style="width:100%">⬇ Download all generated images in this chat</button>
+      <div class="hint" style="margin-top:4px">The extension scrolls through the whole chat by itself to collect every image, then saves them. Keep the tab open until it finishes.</div>
     </div>
 
     <div class="tp" data-pane="settings" hidden>
       <div class="grid2">
-        <div><label class="l" style="margin-top:0">প্রম্পটের মাঝে বিরতি (s)</label><input type="number" id="sDelay" class="input" min="1"></div>
-        <div><label class="l" style="margin-top:0">সর্বোচ্চ অপেক্ষা (min)</label><input type="number" id="sMax" class="input" min="1"></div>
+        <div><label class="l" style="margin-top:0">Delay between prompts (s)</label><input type="number" id="sDelay" class="input" min="1"></div>
+        <div><label class="l" style="margin-top:0">Max wait per image (min)</label><input type="number" id="sMax" class="input" min="1"></div>
       </div>
-      <div class="sw" style="margin-top:8px"><span>Limit ধরা পড়লে থামাও</span><input type="checkbox" id="sLim"></div>
-      <div class="sw"><span>ছবি শেষ হলে বিপ সাউন্ড</span><input type="checkbox" id="sSnd"></div>
-      <label class="l">Log <span class="hint">(শেষ ৩০টি)</span></label>
+      <div class="sw" style="margin-top:8px"><span>Pause when a usage limit is detected</span><input type="checkbox" id="sLim"></div>
+      <div class="sw"><span>Beep when an image finishes</span><input type="checkbox" id="sSnd"></div>
+      <label class="l">Log <span class="hint">(last 30)</span></label>
       <pre id="log"></pre>
     </div>
   </div>
-  <div id="status">প্রস্তুত</div>
+  <div id="status">Ready</div>
 </div>`;
   document.documentElement.appendChild(host);
   const $ = (s) => shadow.querySelector(s);
@@ -240,7 +240,7 @@ SCENE R6: A council of viziers ...</pre>
     host.classList.toggle('light', S.settings.theme === 'light');
     $('#theme').innerHTML = ic(S.settings.theme === 'light' ? 'moon' : 'sun');
     const sel = $('#projSel');
-    sel.innerHTML = S.projects.map((p) => `<option value="${p.id}" ${p.id === S.activeId ? 'selected' : ''}>${esc(p.name)} (${p.items.filter((i) => i.status === 'done').length}/${p.items.length})</option>`).join('') || '<option>— প্রজেক্ট নেই —</option>';
+    sel.innerHTML = S.projects.map((p) => `<option value="${p.id}" ${p.id === S.activeId ? 'selected' : ''}>${esc(p.name)} (${p.items.filter((i) => i.status === 'done').length}/${p.items.length})</option>`).join('') || '<option>— No projects —</option>';
     const p = active();
     if (shadow.activeElement !== $('#projName')) $('#projName').value = p ? p.name : '';
     if (shadow.activeElement !== $('#targetUrl')) $('#targetUrl').value = p ? p.targetUrl || '' : '';
@@ -258,10 +258,10 @@ SCENE R6: A council of viziers ...</pre>
     $('#list').innerHTML = p && p.items.length ? p.items.map((it, n) => `
       <div class="it ${nextId && nextId.id === it.id ? 'cur' : ''}">
         <div class="itm"><span class="badge b-${it.status}">${label[it.status]}</span><b>${esc(it.label)}</b><span class="sp"></span>
-          <button class="btn ghost xs" data-a="redo" data-i="${n}" title="আবার pending করো">${ic('reset', 12)}</button>
-          <button class="btn ghost xs" data-a="del" data-i="${n}" title="মুছো">${ic('x', 12)}</button></div>
+          <button class="btn ghost xs" data-a="redo" data-i="${n}" title="Set back to pending">${ic('reset', 12)}</button>
+          <button class="btn ghost xs" data-a="del" data-i="${n}" title="Remove">${ic('x', 12)}</button></div>
         <div class="t" title="${esc(it.text)}">${esc(it.text)}</div>${it.msg ? `<div class="m">${esc(it.msg)}</div>` : ''}
-      </div>`).join('') : '<div class="empty">কোনো প্রম্পট নেই — Import ট্যাব থেকে যোগ করো</div>';
+      </div>`).join('') : '<div class="empty">No prompts yet — add some from the Import tab</div>';
     const total = p ? p.items.length : 0, done = p ? p.items.filter((i) => i.status === 'done').length : 0;
     $('#progName').textContent = p ? p.name : '—'; $('#progTxt').textContent = `${done}/${total}`;
     $('#progBar').style.width = (total ? (done / total) * 100 : 0) + '%';
@@ -285,7 +285,7 @@ SCENE R6: A council of viziers ...</pre>
     S.projects.push(p); S.activeId = p.id; await save(); render();
   };
   $('#delProj').onclick = async () => {
-    const p = active(); if (!p || !confirm(`"${p.name}" ডিলিট করবে?`)) return;
+    const p = active(); if (!p || !confirm(`Delete "${p.name}"?`)) return;
     S.projects = S.projects.filter((x) => x.id !== p.id); S.activeId = S.projects[0] ? S.projects[0].id : null;
     await save(); render();
   };
@@ -308,12 +308,12 @@ SCENE R6: A council of viziers ...</pre>
     try {
       const h = await window.showDirectoryPicker({ mode: 'readwrite', id: 'bpi-save' });
       dirHandle = h; await idbSet('dir', h); S.settings.dest = 'picker'; await save(); render();
-      setStatus('ফোল্ডার সিলেক্টেড: ' + h.name);
-    } catch (e) { if (e.name !== 'AbortError') setStatus('ফোল্ডার বাছা যায়নি: ' + e.message); }
+      setStatus('Folder selected: ' + h.name);
+    } catch (e) { if (e.name !== 'AbortError') setStatus('Could not pick folder: ' + e.message); }
   };
   $('#dlAll').onclick = () => downloadAllInChat();
   $('#sSnd').onchange =async (e) => { S.settings.sound = e.target.checked; await save(); };
-  $('#skip').onclick = () => { skipNow = true; setStatus('Skip/Done চাপা হয়েছে'); };
+  $('#skip').onclick = () => { skipNow = true; setStatus('Skip/Done pressed'); };
 
   $('#file').onchange = async (e) => {
     const f = e.target.files[0]; if (!f) return;
@@ -323,17 +323,17 @@ SCENE R6: A council of viziers ...</pre>
   const mkItems = (arr) => arr.map((x) => ({ id: uid(), label: x.label, text: x.text, status: 'pending', msg: '' }));
   $('#impNew').onclick = async () => {
     const items = bpiParse($('#paste').value);
-    if (!items.length) return setStatus('কোনো প্রম্পট পাওয়া যায়নি');
+    if (!items.length) return setStatus('No prompts found');
     const name = $('#paste').dataset.name || 'Project ' + (S.projects.length + 1);
     const p = { id: uid(), name, targetUrl: '', prefix: '', suffix: '', items: mkItems(items) };
-    S.projects.push(p); S.activeId = p.id; await save(); render(); setStatus(`${items.length} টা প্রম্পট import হয়েছে → "${name}"`);
+    S.projects.push(p); S.activeId = p.id; await save(); render(); setStatus(`Imported ${items.length} prompts → "${name}"`);
     $('#paste').value = ''; delete $('#paste').dataset.name;
   };
   $('#impAdd').onclick = async () => {
-    const p = active(); if (!p) return setStatus('আগে প্রজেক্ট বানাও');
+    const p = active(); if (!p) return setStatus('Create a project first');
     const items = bpiParse($('#paste').value);
-    if (!items.length) return setStatus('কোনো প্রম্পট পাওয়া যায়নি');
-    p.items.push(...mkItems(items)); await save(); render(); setStatus(`${items.length} টা যোগ হয়েছে`);
+    if (!items.length) return setStatus('No prompts found');
+    p.items.push(...mkItems(items)); await save(); render(); setStatus(`Added ${items.length} prompts`);
     $('#paste').value = '';
   };
   $('#sample').onclick = () => {
@@ -348,12 +348,12 @@ SCENE R6: A council of viziers ...</pre>
     await save(); render();
   };
   $('#retry').onclick = async () => { const p = active(); if (!p) return; p.items.forEach((i) => { if (i.status === 'error') { i.status = 'pending'; i.msg = ''; } }); await save(); render(); };
-  $('#reset').onclick = async () => { const p = active(); if (!p || !confirm('সব আইটেম pending করবে?')) return; p.items.forEach((i) => { i.status = 'pending'; i.msg = ''; }); await save(); render(); };
-  $('#pause').onclick = async () => { S.run.running = false; await save(); render(); setStatus('চলতি প্রম্পট শেষ হলে থামবে…'); };
+  $('#reset').onclick = async () => { const p = active(); if (!p || !confirm('Set all items back to pending?')) return; p.items.forEach((i) => { i.status = 'pending'; i.msg = ''; }); await save(); render(); };
+  $('#pause').onclick = async () => { S.run.running = false; await save(); render(); setStatus('Will pause after the current prompt…'); };
   $('#start').onclick = async () => {
-    if (S.settings.dest === 'picker' && S.settings.autoDownload && !(await dirPerm(true))) return setStatus('আগে Download ট্যাবে ফোল্ডার বেছে permission দাও');
-    const p = active(); if (!p) return setStatus('প্রজেক্ট নেই');
-    if (!p.items.some((i) => i.status === 'pending' || i.status === 'sending')) return setStatus('pending প্রম্পট নেই (Reset/Retry করো)');
+    if (S.settings.dest === 'picker' && S.settings.autoDownload && !(await dirPerm(true))) return setStatus('Choose a folder and grant permission in the Download tab first');
+    const p = active(); if (!p) return setStatus('No project');
+    if (!p.items.some((i) => i.status === 'pending' || i.status === 'sending')) return setStatus('No pending prompts (use Reset/Retry)');
     S.run = { running: true, projectId: p.id, navDone: false }; await save(); render(); runLoop();
   };
 
@@ -361,7 +361,7 @@ SCENE R6: A council of viziers ...</pre>
   async function waitFor(fn, timeout, what) {
     const t0 = Date.now();
     while (Date.now() - t0 < timeout) { const v = fn(); if (v) return v; await sleep(300); }
-    throw new Error(what + ' পাওয়া যায়নি');
+    throw new Error(what + ' not found');
   }
 
   async function fillPrompt(text) {
@@ -383,7 +383,7 @@ SCENE R6: A council of viziers ...</pre>
       const dt = new DataTransfer(); dt.setData('text/plain', text);
       ed.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
       await sleep(400);
-      if (!ed.innerText.includes(head)) throw new Error('প্রম্পট বসানো যায়নি');
+      if (!ed.innerText.includes(head)) throw new Error('Could not enter the prompt');
     }
   }
 
@@ -410,7 +410,7 @@ SCENE R6: A council of viziers ...</pre>
     const m = qa(CFG.assistant); if (m.length) return m[m.length - 1].innerText.slice(0, 400);
     const arts = qa('article'); return arts.length ? arts[arts.length - 1].innerText.slice(0, 400) : '';
   }
-  // hard = নিশ্চিত জেনারেট হচ্ছে; soft = সম্ভাব্য (Thinking / Preview ব্যাজ)
+  // hard = definitely generating; soft = probably generating (Thinking / Preview badge)
   function genState(img) {
     if (q(CFG.stop)) return { hard: 'stop', soft: [] };
     const sb = [...document.querySelectorAll('button')].find((b) => /stop/i.test((b.getAttribute('aria-label') || '') + ' ' + (b.getAttribute('data-testid') || '')));
@@ -436,7 +436,7 @@ SCENE R6: A council of viziers ...</pre>
       const sig = (imgNow ? imgNow.src + imgNow.naturalWidth : '') + '|' + lastTurnText().length;
       if (sig !== lastSig) { lastSig = sig; lastChange = Date.now(); }
       const stable = Math.round((Date.now() - lastChange) / 1000);
-      mon(`Stop: ${g.hard || '—'} · Thinking/Preview: ${g.soft.join(',') || '—'} · ছবি: ${imgNow ? '✅' : '—'} · স্থির: ${stable}s · শুরু: ${started ? 'হ্যাঁ' : 'না'} · সময়: ${Math.round((Date.now() - t0) / 1000)}s`);
+      mon(`Stop: ${g.hard || '—'} · Thinking/Preview: ${g.soft.join(',') || '—'} · Image: ${imgNow ? '✅' : '—'} · Stable: ${stable}s · Started: ${started ? 'yes' : 'no'} · Time: ${Math.round((Date.now() - t0) / 1000)}s`);
       if (skipNow) { skipNow = false; return imgNow ? { img: imgNow } : { skipped: true }; }
       if (!started && (g.hard || g.soft.length || qa(CFG.user).length > uCount || imgNow || (ed && edText === ''))) started = true;
       if (started) {
@@ -449,16 +449,16 @@ SCENE R6: A council of viziers ...</pre>
         }
       } else {
         if (!retried && Date.now() - t0 > 20000 && edText) { retried = true; await clickSend(); }
-        if (Date.now() - t0 > 45000) throw new Error('Send হয়নি');
+        if (Date.now() - t0 > 45000) throw new Error('Prompt was not sent');
       }
       await sleep(1000);
     }
-    throw new Error('টাইমআউট — ছবি আসেনি');
+    throw new Error('Timeout — no image arrived');
   }
 
   function blobToDataUrl(b) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); }); }
 
-  // ---- ফাইলের নাম: প্রম্পটের scene নম্বর, না থাকলে প্রম্পট-সিরিয়াল ----
+  // ---- File name: scene number from the prompt, else the prompt serial ----
   function sceneId(t) {
     const m = String(t || '').match(/\bscene\s*(?:no\.?|number|#)?\s*[:\-]?\s*([A-Za-z]{0,3}\d+[A-Za-z0-9_-]{0,6})\b/i);
     return m ? m[1] : '';
@@ -470,7 +470,7 @@ SCENE R6: A council of viziers ...</pre>
     return S.settings.serial ? `${nn}_${safe(sc)}` : safe(sc);
   }
 
-  // ---- ফোল্ডার বাছাই (File System Access API) ----
+  // ---- Folder picker (File System Access API) ----
   let dirHandle = null;
   const idbOpen = () => new Promise((res, rej) => { const r = indexedDB.open('bpi-handles', 1); r.onupgradeneeded = () => r.result.createObjectStore('h'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
   async function idbGet(k) { const db = await idbOpen(); return new Promise((res, rej) => { const t = db.transaction('h').objectStore('h').get(k); t.onsuccess = () => res(t.result); t.onerror = () => rej(t.error); }); }
@@ -504,42 +504,89 @@ SCENE R6: A council of viziers ...</pre>
     return new Promise((r, j) => c.toBlob((b) => (b ? r(b) : j(new Error('png convert failed'))), 'image/png'));
   }
 
-  async function saveImage(img, project, base) {
+  // blob: PNG blob (or null -> fall back to the image URL)
+  async function saveBlobOut(blob, fallbackUrl, project, base) {
     const fname = base + '.png';
-    let blob = null;
-    try { blob = await imgToPng(img); } catch (e) { /* URL fallback */ }
     if (S.settings.dest === 'picker') {
       if (blob && (await dirPerm(false))) { await writeToDir(blob, project, fname); return; }
-      setStatus('⚠ ফোল্ডার permission নেই — Downloads-এ সেভ হচ্ছে (Download ট্যাব থেকে আবার বেছে নাও)');
+      setStatus('⚠ No folder permission — saving to Downloads instead (re-pick the folder in the Download tab)');
     }
     const root = safe(S.settings.dlRoot || 'ChatGPT-Bulk');
     const path = `${root}/${S.settings.projSub ? safe(project) + '/' : ''}${fname}`;
-    const url = blob ? await blobToDataUrl(blob) : img.src;
+    const url = blob ? await blobToDataUrl(blob) : fallbackUrl;
     const r = await chrome.runtime.sendMessage({ type: 'download', url, filename: path });
-    if (!r || !r.ok) throw new Error('ডাউনলোড ব্যর্থ: ' + (r && r.error));
+    if (!r || !r.ok) throw new Error('Download failed: ' + (r && r.error));
   }
 
+  async function saveImage(img, project, base) {
+    let blob = null;
+    try { blob = await imgToPng(img); } catch (e) { /* URL fallback */ }
+    return saveBlobOut(blob, img.src, project, base);
+  }
+
+  // ChatGPT only keeps a window of turns mounted, so we scroll through the whole
+  // chat and grab each image (as a PNG blob) while it is mounted.
   async function downloadAllInChat() {
-    if (S.settings.dest === 'picker' && !(await dirPerm(true))) return setStatus('আগে ফোল্ডার বেছে permission দাও');
-    const nodes = [...document.querySelectorAll('[data-user-message-bubble="true"], img[alt^="Generated image"]')];
-    let n = 0, prompt = ''; const seen = new Set(), jobs = [];
-    for (const el of nodes) {
-      if (el.tagName !== 'IMG') { prompt = el.innerText; n++; continue; }
-      if (seen.has(el.src) || (el.naturalWidth || el.width) < 150) continue;
-      seen.add(el.src); jobs.push({ img: el, prompt, n });
-    }
-    if (!jobs.length) return setStatus('এই চ্যাটে কোনো generated ছবি পাওয়া যায়নি');
+    if (S.settings.dest === 'picker' && !(await dirPerm(true))) return setStatus('Choose a folder and grant permission first');
+    const findScroller = () => {
+      const known = document.querySelector('.thread-scroll-container');
+      if (known) return known;
+      let n = document.querySelector('[data-user-message-bubble="true"]');
+      while (n && n !== document.documentElement) {
+        if (/(auto|scroll)/.test(getComputedStyle(n).overflowY) && n.scrollHeight > n.clientHeight + 50) return n;
+        n = n.parentElement;
+      }
+      return null;
+    };
+    const sc = findScroller();
+    const found = new Map(); // turn key -> { blob, prompt, order }
+    const harvest = async () => {
+      const nodes = [...document.querySelectorAll('[data-user-message-bubble="true"], img[alt^="Generated image"]')];
+      let prompt = '';
+      for (const el of nodes) {
+        if (el.tagName !== 'IMG') { prompt = el.innerText; continue; }
+        if ((el.naturalWidth || el.width) < 150) continue;
+        const tk = el.closest('[data-turn-key]');
+        const key = (tk ? tk.dataset.turnKey : el.src) + '|' + el.alt;
+        const rec = found.get(key);
+        if (rec) { if (!rec.prompt && prompt) rec.prompt = prompt; continue; }
+        for (let i = 0; i < 10 && !(el.complete && el.naturalWidth); i++) await sleep(300);
+        try {
+          found.set(key, { blob: await imgToPng(el), prompt, order: found.size });
+          setStatus(`Scanning chat… found ${found.size} images`);
+        } catch (e) { log('Skipped an unreadable image: ' + e.message); }
+      }
+    };
+    setStatus('Scanning chat…');
+    const startTop = sc ? sc.scrollTop : 0;
+    if (sc) {
+      sc.scrollTop = 0; await sleep(900);
+      let stuck = 0;
+      for (let i = 0; i < 500; i++) {
+        await harvest();
+        if (sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 4) break;
+        const before = sc.scrollTop;
+        sc.scrollTop = before + Math.floor(sc.clientHeight * 0.5);
+        await sleep(700);
+        if (sc.scrollTop === before) { if (++stuck >= 2) break; } else stuck = 0;
+      }
+      await harvest();
+      sc.scrollTop = startTop;
+    } else await harvest();
+
+    const list = [...found.values()].sort((x, y) => x.order - y.order);
+    if (!list.length) return setStatus('No generated images found in this chat');
     const projName = (active() || {}).name || 'chat';
-    const pad = Math.max(2, String(jobs.length).length);
+    const pad = Math.max(2, String(list.length).length);
     let ok = 0;
-    for (let i = 0; i < jobs.length; i++) {
-      const j = jobs[i], sc = sceneId(j.prompt), nn = String(Math.max(j.n, 1)).padStart(pad, '0');
-      const base = sc ? (S.settings.serial ? `${nn}_${safe(sc)}` : safe(sc)) : nn;
-      setStatus(`ডাউনলোড ${i + 1}/${jobs.length}: ${base}`);
-      try { await saveImage(j.img, projName, base); ok++; } catch (e) { log('ব্যর্থ ' + base + ': ' + e.message); }
-      await sleep(300);
+    for (let i = 0; i < list.length; i++) {
+      const it = list[i], sc2 = sceneId(it.prompt), nn = String(i + 1).padStart(pad, '0');
+      const base = sc2 ? (S.settings.serial ? `${nn}_${safe(sc2)}` : safe(sc2)) : nn;
+      setStatus(`Saving ${i + 1}/${list.length}: ${base}`);
+      try { await saveBlobOut(it.blob, '', projName, base); ok++; } catch (e) { log('Failed ' + base + ': ' + e.message); }
+      await sleep(200);
     }
-    setStatus(`✅ ${ok}/${jobs.length} ছবি সেভ হয়েছে`); beep();
+    setStatus(`✅ Saved ${ok}/${list.length} images`); beep();
   }
 
   async function processItem(p, it) {
@@ -552,18 +599,18 @@ SCENE R6: A council of viziers ...</pre>
       try { await fillPrompt(full); await clickSend(); }
       catch (e) { it.status = 'error'; it.msg = e.message; await save(); render(); return; }
     }
-    setStatus(`জেনারেট হচ্ছে: ${it.label}`);
+    setStatus(`Generating: ${it.label}`);
     try {
       const res = await waitResult(uCount, before, resume);
-      if (res.resumed) { it.status = 'done'; it.msg = 'resume — ডাউনলোড বাদ'; }
-      else if (res.skipped) { it.status = 'done'; it.msg = 'ম্যানুয়ালি skip'; }
+      if (res.resumed) { it.status = 'done'; it.msg = 'resumed — download skipped'; }
+      else if (res.skipped) { it.status = 'done'; it.msg = 'skipped manually'; }
       else if (res.img) {
         if (S.settings.autoDownload) await saveImage(res.img, p.name, baseName(it.text, p.items.indexOf(it), p.items.length));
         it.status = 'done'; it.msg = '';
-        setStatus(`✅ ${it.label} সম্পন্ন`); beep();
+        setStatus(`✅ ${it.label} done`); beep();
       } else if (res.limit && S.settings.pauseOnLimit) {
-        it.status = 'pending'; it.msg = 'লিমিট: ' + res.text.slice(0, 80); S.run.running = false;
-      } else { it.status = 'error'; it.msg = (res.text || 'ছবি পাওয়া যায়নি').slice(0, 120); }
+        it.status = 'pending'; it.msg = 'Limit: ' + res.text.slice(0, 80); S.run.running = false;
+      } else { it.status = 'error'; it.msg = (res.text || 'No image found').slice(0, 120); }
     } catch (e) { it.status = 'error'; it.msg = e.message; }
     await save(); render();
   }
@@ -577,20 +624,20 @@ SCENE R6: A council of viziers ...</pre>
       if (p.targetUrl && !S.run.navDone) {
         S.run.navDone = true; await save();
         const t = new URL(p.targetUrl, location.origin);
-        if (t.pathname !== location.pathname) { setStatus('চ্যাটে যাচ্ছি…'); location.href = t.href; return; }
+        if (t.pathname !== location.pathname) { setStatus('Opening chat…'); location.href = t.href; return; }
       }
       await waitFor(() => q(CFG.editor), 30000, 'prompt box');
       while (S.run.running) {
         p = proj(S.run.projectId); if (!p) break;
         const it = p.items.find((i) => i.status === 'sending') || p.items.find((i) => i.status === 'pending');
-        if (!it) { S.run.running = false; setStatus('সব শেষ ✅'); beep(); beep(); break; }
+        if (!it) { S.run.running = false; setStatus('All done ✅'); beep(); beep(); break; }
         await processItem(p, it);
         if (!S.run.running) break;
-        for (let s = S.settings.delay; s > 0 && S.run.running; s--) { setStatus(`পরের প্রম্পট ${s}s পরে…`); await sleep(1000); }
+        for (let s = S.settings.delay; s > 0 && S.run.running; s--) { setStatus(`Next prompt in ${s}s…`); await sleep(1000); }
       }
-      if (!S.run.running && !/শেষ/.test($('#status').textContent)) setStatus('থেমেছে ⏸');
-    } catch (e) { S.run.running = false; setStatus('থেমেছে: ' + e.message); }
-    finally { clearInterval(hb); looping = false; mon('মনিটর: নিষ্ক্রিয়'); await save(); render(); }
+      if (!S.run.running && !/done/i.test($('#status').textContent)) setStatus('Stopped ⏸');
+    } catch (e) { S.run.running = false; setStatus('Stopped: ' + e.message); }
+    finally { clearInterval(hb); looping = false; mon('Monitor: idle'); await save(); render(); }
   }
 
   // ---------- init ----------
@@ -598,7 +645,7 @@ SCENE R6: A council of viziers ...</pre>
     try { shadow.querySelector('.t2').textContent += ' · v' + chrome.runtime.getManifest().version; } catch (e) {}
     await load(); try { dirHandle = (await idbGet('dir')) || null; } catch (e) { dirHandle = null; }
     render();
-    if (S.run.running) { // পেজ reload/navigation এর পর resume
+    if (S.run.running) { // resume after a page reload/navigation
       await sleep(6000);
       const d = await chrome.storage.local.get(['bpi', 'bpi_hb']);
       if (d.bpi && d.bpi.run && d.bpi.run.running && Date.now() - (d.bpi_hb || 0) > 5000) {
