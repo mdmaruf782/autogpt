@@ -1,8 +1,8 @@
-# ChatGPT Bulk Image Prompter
+# Bulk Image Prompter (ChatGPT + Google Flow)
 
-A Chrome extension that lets you import a batch of image prompts (organised by project), then submits them to ChatGPT one by one. When an image finishes generating, it is saved automatically and the next prompt is sent — until the whole queue is done.
+A Chrome extension that lets you import a batch of prompts (organised by project), then submits them to ChatGPT or Google Flow one by one. When an image finishes generating, it is saved automatically and the next prompt is sent — until the whole queue is done.
 
-> Unofficial tool. Not affiliated with or endorsed by OpenAI. It automates the ChatGPT web UI, so it can break when ChatGPT changes its interface, and your usage is still subject to ChatGPT's terms and image-generation limits.
+> Unofficial tool. Not affiliated with or endorsed by OpenAI or Google. It automates the ChatGPT and Google Flow web UIs, so it can break when they change their interfaces, and your usage is still subject to their terms, limits and credits.
 
 ## Features
 
@@ -16,7 +16,7 @@ A Chrome extension that lets you import a batch of image prompts (organised by p
 - **Choose where to save** — the Downloads folder (custom sub-folder) or any folder you pick.
 - **Download all** — one button saves every generated image in the current chat.
 - **Dark and light themes**, beep on completion, resumes after a page reload.
-- **Google Flow** — coming soon.
+- **Google Flow (image and video)** — pick the mode, aspect ratio, model and outputs once in the **Flow** tab; they are applied to Flow automatically every time you press Start. Images are saved as PNG, videos as MP4.
 
 ## Install
 
@@ -24,7 +24,7 @@ A Chrome extension that lets you import a batch of image prompts (organised by p
 2. Open `chrome://extensions` in Chrome.
 3. Turn on **Developer mode** (top right).
 4. Click **Load unpacked** and select this folder (the one that contains `manifest.json`).
-5. Open [chatgpt.com](https://chatgpt.com) and refresh the page.
+5. Open [chatgpt.com](https://chatgpt.com) or [flow.google.com](https://flow.google.com) and refresh the page.
 6. Optional: click the puzzle icon in the toolbar and pin the extension.
 
 A **Bulk Image** button appears at the bottom right of ChatGPT. Click it (or the toolbar icon) to open or close the panel. The panel header shows the installed version.
@@ -152,13 +152,102 @@ const CFG = {
 
 Open ChatGPT's DevTools, find the new attribute or `aria-label` for the element, and update the matching selector.
 
+## Google Flow
+
+1. Open your Flow project (`https://flow.google.com/project/…`) and open the panel.
+2. Go to the **Flow** tab and choose:
+   - **Mode** — Image or Video (Video also has **Frames** / **Ingredients**)
+   - **Aspect ratio** — Image: 16:9, 4:3, 1:1, 3:4, 9:16 · Video: 16:9, 9:16
+   - **Model** — e.g. Nano Banana Pro (image), Veo 3.1 - Lite / Fast / Quality, Omni (video)
+   - **Outputs per prompt** — x1 to x4
+3. Import prompts and press **Start**. The extension opens Flow's settings, selects your choices, checks them, then submits each prompt and waits until every new tile has finished (or failed) before moving on. **Apply to Flow now** lets you test the settings without running anything.
+   - **Video download quality** — 1080p (upscaled by Flow, then downloaded), 720p original, 270p GIF, or the direct file. This uses each video's own Download menu, so 1080p takes extra time; these files go to Chrome's Downloads folder.
+4. With more than one output per prompt, files get `_1`, `_2`… after the name. Use **Download all images and videos on this page** to save everything already in the project.
+
+Notes: every generation uses Flow credits. If Flow shows an "unusual activity" warning, the run stops instead of retrying — reload Flow, use it manually for a bit, then press Start again. In the Project tab, set the project's URL to your Flow project so Start opens it first.
+
+## Control with Claude (MCP)
+
+The extension can be driven by an AI assistant — **Claude** (Claude Code or Claude Desktop) or **Codex** (OpenAI Codex CLI) — through a small local MCP server in `mcp-server/`. The assistant can import prompts, start/pause, change Google Flow settings and read live progress.
+
+```
+Claude / Codex  ⇄  MCP server (node, stdio)  ⇄  WebSocket on 127.0.0.1  ⇄  extension  ⇄  ChatGPT / Flow tab
+```
+
+### 1. Install the server (once)
+
+Needs Node 18+.
+
+```bash
+cd mcp-server
+npm install
+```
+
+Note the full path to `mcp-server/server.js` (for example `/Users/you/chromeExt/autogpt/mcp-server/server.js`). Use it in the commands below.
+
+### 2. Register it with your assistant
+
+**Claude Code**
+
+```bash
+claude mcp add bulk-image-prompter -- node /full/path/to/mcp-server/server.js
+```
+
+Check with `claude mcp list`, then start a new Claude Code session (MCP tools load at session start).
+
+**Claude Desktop** — edit `claude_desktop_config.json` (Settings → Developer → Edit Config), add the block below, then restart the app:
+
+```json
+{
+  "mcpServers": {
+    "bulk-image-prompter": {
+      "command": "node",
+      "args": ["/full/path/to/mcp-server/server.js"]
+    }
+  }
+}
+```
+
+**Codex CLI** — either run:
+
+```bash
+codex mcp add bulk-image-prompter -- node /full/path/to/mcp-server/server.js
+```
+
+or add this to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.bulk-image-prompter]
+command = "node"
+args = ["/full/path/to/mcp-server/server.js"]
+```
+
+Check with `codex mcp list` (or `/mcp` inside Codex), then start a new Codex session.
+
+Any other MCP-capable client works the same way: run `node /full/path/to/mcp-server/server.js` as a stdio server.
+
+### 3. Turn on the bridge in Chrome
+
+Open the extension panel → **Settings** → turn on **MCP bridge**. The status line changes to "Connected to the MCP server" once your assistant has started the server. The default port is 8765; to change it, set the `BPI_PORT` environment variable for the server and enter the same number in the panel. Only one assistant session can hold the port at a time — close the other one if the status stays on "Waiting for the MCP server".
+
+### 4. Ask your assistant
+
+> Open Flow, import these prompts as project "Ep3", set video mode with Veo 3.1 - Fast at 1080p, start it and tell me when it's done.
+
+> Open ChatGPT, import the prompts from this file as "Chapter 2" and run them all.
+
+**Tools:** `list_tabs`, `open_tab`, `get_status`, `list_projects`, `get_items`, `import_prompts`, `update_project`, `delete_project`, `start`, `pause`, `skip_current`, `retry_errors`, `reset_project`, `set_settings`, `set_flow_settings`, `download_all`, `wait_for_progress`.
+
+**Safety:** the server listens on `127.0.0.1` only and refuses any connection that does not come from a browser extension, so websites cannot reach it. Optionally set `BPI_TOKEN` for the server and the same value in the panel's Token field. Keep the browser open while a run is in progress; the first-time folder-picker permission still has to be granted by you in the Download tab.
+
 ## Project structure
 
 ```
 manifest.json        Chrome extension manifest (MV3)
-content.js           Panel UI and ChatGPT automation
+content.js           Panel UI and ChatGPT / Google Flow automation
 parser.js            Prompt import parser (Markdown / JSON / CSV / text)
-background.js        Handles downloads and the toolbar icon click
+background.js        Downloads, file renaming, toolbar icon click and the MCP bridge
+mcp-server/          Local MCP server (server.js, package.json) for Claude
 icons/               Extension icons
 sample-prompts.md    Sample import file (Markdown)
 sample-prompts.json  Sample import file (JSON)
@@ -168,7 +257,7 @@ Everything runs locally in your browser. Projects and settings are stored with `
 
 ## Roadmap
 
-- Google Flow support (the option is visible in the panel as "Coming soon").
+- Flow: choose video duration/resolution (not selectable in Flow's settings popover today) and per-tile download quality.
 
 ## License
 

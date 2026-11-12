@@ -1,16 +1,22 @@
 {
   "manifest_version": 3,
-  "name": "ChatGPT Bulk Image Prompter",
-  "version": "1.6.2",
-  "description": "Bulk import prompts (project-wise) and auto-submit them one by one in ChatGPT for image generation, with auto-download.",
+  "name": "Bulk Image Prompter (ChatGPT + Google Flow)",
+  "version": "1.8.1",
+  "description": "Bulk import prompts (project-wise) and auto-submit them one by one in ChatGPT or Google Flow (image and video), with auto-download.",
   "permissions": [
-    "storage",
-    "downloads"
+    "alarms",
+    "downloads",
+    "storage"
   ],
   "host_permissions": [
     "https://chatgpt.com/*",
     "https://chat.openai.com/*",
-    "https://*.oaiusercontent.com/*"
+    "https://*.oaiusercontent.com/*",
+    "https://flow.google.com/*",
+    "https://labs.google/*",
+    "https://*.googleusercontent.com/*",
+    "https://storage.googleapis.com/*",
+    "http://127.0.0.1/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -27,7 +33,9 @@
     {
       "matches": [
         "https://chatgpt.com/*",
-        "https://chat.openai.com/*"
+        "https://chat.openai.com/*",
+        "https://flow.google.com/*",
+        "https://labs.google/fx/*"
       ],
       "js": [
         "parser.js",

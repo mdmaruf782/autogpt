@@ -2,8 +2,15 @@
   if (window.__bpiLoaded) return;
   window.__bpiLoaded = true;
 
+  const IS_FLOW = /(^|\.)flow\.google\.com$/.test(location.hostname) || (location.hostname === 'labs.google' && location.pathname.startsWith('/fx'));
+  const SITE_NAME = IS_FLOW ? 'Google Flow' : 'ChatGPT';
+
   // If ChatGPT's DOM changes, only these selectors need updating
-  const CFG = {
+  const CFG = IS_FLOW ? {
+    editor: ['div[role="textbox"][contenteditable="true"]', 'div[role="textbox"]'],
+    send: ['button[aria-label="Start generation"]'],
+    stop: [], assistant: 'x-none', user: 'x-none',
+  } : {
     editor: ['#prompt-textarea', 'div.ProseMirror[contenteditable="true"]', 'textarea[name="prompt-textarea"]'],
     send: ['button[data-testid="send-button"]', 'button[aria-label="Send"]', 'button[aria-label="Send prompt"]', 'button[aria-label="Send message"]'],
     stop: ['button[data-testid="stop-button"]', 'button[aria-label="Stop"]', 'button[aria-label="Stop streaming"]', 'button[aria-label="Stop generating"]'],
@@ -12,7 +19,12 @@
   };
   const LIMIT_RE = /(hit|reached).{0,60}limit|too many (requests|images)|try again (later|in)|rate limit/i;
 
-  const DEFAULTS = { delay: 6, maxWaitMin: 8, autoDownload: true, pauseOnLimit: true, sound: true, serial: true, theme: 'dark', dest: 'downloads', dlRoot: 'ChatGPT-Bulk', projSub: true };
+  const DEFAULTS = { delay: 6, maxWaitMin: 8, autoDownload: true, pauseOnLimit: true, sound: true, serial: true, theme: 'dark', dest: 'downloads', dlRoot: 'ChatGPT-Bulk', dlRootFlow: 'Flow-Bulk', projSub: true,
+    flow: { apply: true, mode: 'image', input: 'frames', aspect: '16:9', imageModel: 'Nano Banana Pro', videoModel: 'Veo 3.1 - Lite', outputs: 1, videoQuality: '1080p' } };
+  const FLOW_IMG_MODELS = ['Nano Banana Pro', 'Nano Banana 2 Lite', 'Nano Banana 2.1'];
+  const FLOW_VID_MODELS = ['Omni 1.2 Flash', 'Omni 1.1 Flash', 'Veo 3.1 - Lite', 'Veo 3.1 - Fast', 'Veo 3.1 - Quality'];
+  const mergeSettings = (x) => { const m = { ...DEFAULTS, ...(x || {}) }; m.flow = { ...DEFAULTS.flow, ...((x && x.flow) || {}) }; return m; };
+  const rootKey = IS_FLOW ? 'dlRootFlow' : 'dlRoot';
   let skipNow = false;
   const logs = [];
   let S = { projects: [], activeId: null, settings: { ...DEFAULTS }, run: { running: false } };
@@ -29,7 +41,7 @@
 
   async function load() {
     const d = await chrome.storage.local.get(['bpi']);
-    if (d.bpi) S = { ...S, ...d.bpi, settings: { ...DEFAULTS, ...(d.bpi.settings || {}) } };
+    if (d.bpi) S = { ...S, ...d.bpi, settings: mergeSettings(d.bpi.settings) };
     if (!active()) S.activeId = S.projects[0] ? S.projects[0].id : null;
   }
   async function save() { try { await chrome.storage.local.set({ bpi: S }); } catch (e) { /* ext reloaded */ } }
@@ -90,7 +102,7 @@ pre{background:var(--pre);border:1px solid var(--border);border-radius:6px;paddi
 .pl{display:flex;align-items:center;justify-content:center;gap:6px;height:32px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--mfg);font-size:12px;font-weight:500;cursor:pointer}
 .pl.on{background:var(--pri);color:var(--prifg);border-color:var(--pri)}
 .pl:disabled{opacity:.6;cursor:not-allowed}.pl .badge{font-size:9.5px;padding:0 6px;color:var(--mfg)}
-.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin:0 14px;padding:3px;background:var(--muted);border-radius:8px}
+.tabs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:2px;margin:0 14px;padding:3px;background:var(--muted);border-radius:8px}
 .tt{height:28px;border:0;border-radius:6px;background:transparent;color:var(--mfg);font-size:11.5px;font-weight:500;cursor:pointer}
 .tt.on{background:var(--bg);color:var(--fg);box-shadow:0 1px 3px #0003}
 .body{padding:12px 14px;overflow:auto;flex:1}
@@ -122,17 +134,17 @@ input[type=checkbox]:checked{background:var(--pri)}input[type=checkbox]:checked:
 <div id="panel">
   <div class="hd">
     <div style="padding-top:2px">${ic('image', 18)}</div>
-    <div><div class="t1">Bulk Image Prompter</div><div class="t2">Queue prompts and auto-generate images in ChatGPT</div></div>
+    <div><div class="t1">Bulk Image Prompter</div><div class="t2">${IS_FLOW ? 'Queue prompts and auto-generate images or videos in Google Flow' : 'Queue prompts and auto-generate images in ChatGPT'}</div></div>
     <div class="sp"></div>
     <button id="theme" class="btn ghost xs" title="Dark / Light">${ic('sun')}</button><button id="close" class="btn ghost xs" title="Close">${ic('x')}</button>
   </div>
   <div class="plat">
-    <button class="pl on" data-plat="chatgpt">ChatGPT</button>
-    <button class="pl" data-plat="flow" disabled title="Google Flow support is coming">Google Flow <span class="badge">Coming soon</span></button>
+    <button class="pl ${IS_FLOW ? '' : 'on'}" data-plat="chatgpt" title="Open ChatGPT">ChatGPT</button>
+    <button class="pl ${IS_FLOW ? 'on' : ''}" data-plat="flow" title="Open Google Flow">Google Flow</button>
   </div>
   <div class="tabs">
     <button class="tt on" data-tab="queue">Queue</button><button class="tt" data-tab="project">Project</button>
-    <button class="tt" data-tab="import">Import</button><button class="tt" data-tab="download">Download</button><button class="tt" data-tab="settings">Settings</button>
+    <button class="tt" data-tab="import">Import</button><button class="tt" data-tab="download">Download</button>${IS_FLOW ? '<button class="tt" data-tab="flow">Flow</button>' : ''}<button class="tt" data-tab="settings">Settings</button>
   </div>
 
   <div class="body">
@@ -188,7 +200,7 @@ SCENE R6: A council of viziers ...</pre>
       </div>
       <div id="destDl">
         <label class="l">Sub-folder name inside Downloads</label>
-        <input id="dlRoot" class="input" placeholder="ChatGPT-Bulk">
+        <input id="dlRoot" class="input" placeholder="${IS_FLOW ? 'Flow-Bulk' : 'ChatGPT-Bulk'}">
       </div>
       <div id="destPk" hidden>
         <label class="l">Selected folder</label>
@@ -200,8 +212,28 @@ SCENE R6: A council of viziers ...</pre>
       <div class="sw"><span>Serial prefix<small>01_R5.png — off gives just R5.png</small></span><input type="checkbox" id="sSer"></div>
       <div class="hint" style="margin-top:8px">File name: the scene number from the prompt (<code>SCENE R5:</code> → R5). If the prompt has no scene number, the prompt's serial number (01, 02…) is used. Duplicate names get _2, _3.</div>
       <div class="sep"></div>
-      <button id="dlAll" class="btn secondary" style="width:100%">⬇ Download all generated images in this chat</button>
-      <div class="hint" style="margin-top:4px">The extension scrolls through the whole chat by itself to collect every image, then saves them. Keep the tab open until it finishes.</div>
+      <button id="dlAll" class="btn secondary" style="width:100%">${IS_FLOW ? '⬇ Download all images and videos on this page' : '⬇ Download all generated images in this chat'}</button>
+      <div class="hint" style="margin-top:4px">${IS_FLOW ? 'Saves every generated image and video currently shown on this Flow page (oldest first). Scroll the page first if your project is long.' : 'The extension scrolls through the whole chat by itself to collect every image, then saves them. Keep the tab open until it finishes.'}</div>
+    </div>
+
+    <div class="tp" data-pane="flow" hidden>
+      <div class="hint">Choose the Flow settings here. They are applied to Flow automatically every time you press Start.</div>
+      <div class="sw" style="margin-top:8px"><span>Apply these settings on Start<small>Turn off to keep whatever is set in Flow</small></span><input type="checkbox" id="fApply"></div>
+      <label class="l">Mode</label>
+      <div class="plat" style="margin:0"><button class="pl" data-fmode="image">Image</button><button class="pl" data-fmode="video">Video</button></div>
+      <div id="fInputWrap"><label class="l">Video input</label>
+        <div class="plat" style="margin:0"><button class="pl" data-finput="frames">Frames</button><button class="pl" data-finput="ingredients">Ingredients</button></div></div>
+      <div class="grid2">
+        <div><label class="l">Aspect ratio</label><select id="fAspect"></select></div>
+        <div><label class="l">Outputs per prompt</label><select id="fOut"><option>1</option><option>2</option><option>3</option><option>4</option></select></div>
+      </div>
+      <div id="fImgWrap"><label class="l">Image model</label><select id="fImgModel"></select></div>
+      <div id="fVidWrap"><label class="l">Video model</label><select id="fVidModel"></select></div>
+      <label class="l">Video download quality</label>
+      <select id="fQual"><option value="1080p">1080p — upscaled by Flow, then downloaded</option><option value="720p">720p — original size</option><option value="270p">270p — animated GIF</option><option value="direct">Direct file (no menu)</option></select>
+      <div class="hint" style="margin-top:4px">Uses each video's Download menu in Flow. 1080p is upscaled first, so each video takes longer. Videos then go to Chrome's Downloads folder (a chosen folder can't be used for these).</div>
+      <div class="ctl" style="margin-top:12px"><button id="fNow" class="btn outline">Apply to Flow now</button></div>
+      <div class="hint" style="margin-top:8px">Files are named from the scene number (or prompt serial). With more than one output per prompt, <code>_1</code>, <code>_2</code>… is added. Images are saved as PNG, videos as MP4. Credits are used for every generation — keep an eye on the credit line in Flow's settings.</div>
     </div>
 
     <div class="tp" data-pane="settings" hidden>
@@ -211,6 +243,13 @@ SCENE R6: A council of viziers ...</pre>
       </div>
       <div class="sw" style="margin-top:8px"><span>Pause when a usage limit is detected</span><input type="checkbox" id="sLim"></div>
       <div class="sw"><span>Beep when an image finishes</span><input type="checkbox" id="sSnd"></div>
+      <div class="sep"></div>
+      <div class="sw" style="border:0"><span>MCP bridge (control with Claude)<small id="mcpState">Off</small></span><input type="checkbox" id="mcpOn"></div>
+      <div class="grid2">
+        <div><label class="l" style="margin-top:0">Port</label><input type="number" id="mcpPort" class="input" min="1024" max="65535"></div>
+        <div><label class="l" style="margin-top:0">Token <span class="hint">(optional)</span></label><input id="mcpTok" class="input" placeholder="only if BPI_TOKEN is set"></div>
+      </div>
+      <div class="hint" style="margin-top:6px">Run the local MCP server (see README → "Control with Claude"), then turn this on. Claude can then import prompts, start/pause, change Flow settings and read progress.</div>
       <label class="l">Log <span class="hint">(last 30)</span></label>
       <pre id="log"></pre>
     </div>
@@ -251,8 +290,9 @@ SCENE R6: A council of viziers ...</pre>
     $('#sProj').checked = S.settings.projSub;
     shadow.querySelectorAll('[data-dest]').forEach((b) => b.classList.toggle('on', b.dataset.dest === S.settings.dest));
     $('#destDl').hidden = S.settings.dest !== 'downloads'; $('#destPk').hidden = S.settings.dest !== 'picker';
-    if (shadow.activeElement !== $('#dlRoot')) $('#dlRoot').value = S.settings.dlRoot || '';
+    if (shadow.activeElement !== $('#dlRoot')) $('#dlRoot').value = S.settings[rootKey] || '';
     $('#pkName').value = dirHandle ? dirHandle.name : '';
+    if (IS_FLOW) renderFlow();
     const label = { pending: 'Pending', sending: 'Running', done: 'Done', error: 'Error' };
     const nextId = p && (p.items.find((i) => i.status === 'sending') || p.items.find((i) => i.status === 'pending'));
     $('#list').innerHTML = p && p.items.length ? p.items.map((it, n) => `
@@ -266,6 +306,20 @@ SCENE R6: A council of viziers ...</pre>
     $('#progName').textContent = p ? p.name : '—'; $('#progTxt').textContent = `${done}/${total}`;
     $('#progBar').style.width = (total ? (done / total) * 100 : 0) + '%';
     $('#start').disabled = S.run.running; 
+  }
+
+  function renderFlow() {
+    const f = S.settings.flow, vid = f.mode === 'video';
+    shadow.querySelectorAll('[data-fmode]').forEach((b) => b.classList.toggle('on', b.dataset.fmode === f.mode));
+    shadow.querySelectorAll('[data-finput]').forEach((b) => b.classList.toggle('on', b.dataset.finput === f.input));
+    $('#fInputWrap').hidden = !vid; $('#fVidWrap').hidden = !vid; $('#fImgWrap').hidden = vid;
+    const aspects = vid ? ['16:9', '9:16'] : ['16:9', '4:3', '1:1', '3:4', '9:16'];
+    if (!aspects.includes(f.aspect)) f.aspect = '16:9';
+    const opt = (list, cur) => list.map((x) => `<option ${x === cur ? 'selected' : ''}>${esc(x)}</option>`).join('');
+    $('#fAspect').innerHTML = opt(aspects, f.aspect);
+    $('#fImgModel').innerHTML = '<option value="">Keep current</option>' + FLOW_IMG_MODELS.map((x) => `<option ${x === f.imageModel ? 'selected' : ''}>${esc(x)}</option>`).join('');
+    $('#fVidModel').innerHTML = '<option value="">Keep current</option>' + FLOW_VID_MODELS.map((x) => `<option ${x === f.videoModel ? 'selected' : ''}>${esc(x)}</option>`).join('');
+    $('#fOut').value = String(f.outputs); $('#fQual').value = f.videoQuality || '1080p'; $('#fApply').checked = f.apply;
   }
 
   // ---------- UI events ----------
@@ -299,7 +353,30 @@ SCENE R6: A council of viziers ...</pre>
   $('#sLim').onchange = async (e) => { S.settings.pauseOnLimit = e.target.checked; await save(); };
   $('#sSer').onchange = async (e) => { S.settings.serial = e.target.checked; await save(); };
   $('#sProj').onchange = async (e) => { S.settings.projSub = e.target.checked; await save(); };
-  $('#dlRoot').onchange = async (e) => { S.settings.dlRoot = e.target.value.trim() || 'ChatGPT-Bulk'; await save(); render(); };
+  $('#dlRoot').onchange = async (e) => { S.settings[rootKey] = e.target.value.trim() || DEFAULTS[rootKey]; await save(); render(); };
+  shadow.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-plat]'); if (!b) return;
+    const isFlowBtn = b.dataset.plat === 'flow';
+    if (isFlowBtn !== IS_FLOW) window.open(isFlowBtn ? 'https://flow.google.com/' : 'https://chatgpt.com/', '_blank');
+  });
+  if (IS_FLOW) {
+    const upd = async (fn) => { fn(S.settings.flow); await save(); render(); };
+    shadow.addEventListener('click', (e) => {
+      const m = e.target.closest('[data-fmode]'), i = e.target.closest('[data-finput]');
+      if (m) upd((f) => { f.mode = m.dataset.fmode; });
+      if (i) upd((f) => { f.input = i.dataset.finput; });
+    });
+    $('#fAspect').onchange = (e) => upd((f) => { f.aspect = e.target.value; });
+    $('#fOut').onchange = (e) => upd((f) => { f.outputs = +e.target.value || 1; });
+    $('#fImgModel').onchange = (e) => upd((f) => { f.imageModel = e.target.value; });
+    $('#fVidModel').onchange = (e) => upd((f) => { f.videoModel = e.target.value; });
+    $('#fQual').onchange = (e) => upd((f) => { f.videoQuality = e.target.value; });
+    $('#fApply').onchange = (e) => upd((f) => { f.apply = e.target.checked; });
+    $('#fNow').onclick = async () => {
+      try { setStatus('Applying Flow settings…'); const r = await flowApplySettings(); setStatus('✅ Flow settings applied: ' + r); }
+      catch (err) { setStatus('Flow settings failed: ' + err.message); }
+    };
+  }
   shadow.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-dest]'); if (!b) return;
     S.settings.dest = b.dataset.dest; await save(); render();
@@ -311,7 +388,7 @@ SCENE R6: A council of viziers ...</pre>
       setStatus('Folder selected: ' + h.name);
     } catch (e) { if (e.name !== 'AbortError') setStatus('Could not pick folder: ' + e.message); }
   };
-  $('#dlAll').onclick = () => downloadAllInChat();
+  $('#dlAll').onclick = () => (IS_FLOW ? downloadAllFlow() : downloadAllInChat());
   $('#sSnd').onchange =async (e) => { S.settings.sound = e.target.checked; await save(); };
   $('#skip').onclick = () => { skipNow = true; setStatus('Skip/Done pressed'); };
 
@@ -350,12 +427,15 @@ SCENE R6: A council of viziers ...</pre>
   $('#retry').onclick = async () => { const p = active(); if (!p) return; p.items.forEach((i) => { if (i.status === 'error') { i.status = 'pending'; i.msg = ''; } }); await save(); render(); };
   $('#reset').onclick = async () => { const p = active(); if (!p || !confirm('Set all items back to pending?')) return; p.items.forEach((i) => { i.status = 'pending'; i.msg = ''; }); await save(); render(); };
   $('#pause').onclick = async () => { S.run.running = false; await save(); render(); setStatus('Will pause after the current prompt…'); };
-  $('#start').onclick = async () => {
-    if (S.settings.dest === 'picker' && S.settings.autoDownload && !(await dirPerm(true))) return setStatus('Choose a folder and grant permission in the Download tab first');
-    const p = active(); if (!p) return setStatus('No project');
-    if (!p.items.some((i) => i.status === 'pending' || i.status === 'sending')) return setStatus('No pending prompts (use Reset/Retry)');
+  async function startRun(fromMcp) {
+    if (S.settings.dest === 'picker' && S.settings.autoDownload && !(await dirPerm(!fromMcp))) throw new Error('Choose a folder and grant permission in the Download tab first');
+    const p = active(); if (!p) throw new Error('No project');
+    if (!p.items.some((i) => i.status === 'pending' || i.status === 'sending')) throw new Error('No pending prompts (use Reset/Retry)');
+    if (S.run.running && looping) throw new Error('Already running');
     S.run = { running: true, projectId: p.id, navDone: false }; await save(); render(); runLoop();
-  };
+    return p.name;
+  }
+  $('#start').onclick = () => startRun(false).catch((e) => setStatus(e.message));
 
   // ---------- ChatGPT automation ----------
   async function waitFor(fn, timeout, what) {
@@ -390,7 +470,10 @@ SCENE R6: A council of viziers ...</pre>
   async function clickSend() {
     for (let i = 0; i < 40; i++) {
       const b = q(CFG.send);
-      if (b && !b.disabled) { b.click(); return; }
+      if (b && !b.disabled && b.getAttribute('aria-disabled') !== 'true') {
+        if (IS_FLOW) ['pointerdown', 'mousedown', 'pointerup', 'mouseup'].forEach((t) => b.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, view: window, button: 0 })));
+        b.click(); return;
+      }
       await sleep(250);
     }
     const ed = q(CFG.editor);
@@ -488,7 +571,7 @@ SCENE R6: A council of viziers ...</pre>
     let dir = dirHandle;
     if (S.settings.projSub) dir = await dir.getDirectoryHandle(safe(project), { create: true });
     let name = fileName, n = 1;
-    for (;;) { try { await dir.getFileHandle(name); n++; name = fileName.replace(/\.png$/, `_${n}.png`); } catch (e) { break; } }
+    for (;;) { try { await dir.getFileHandle(name); n++; name = fileName.replace(/(\.\w+)$/, `_${n}$1`); } catch (e) { break; } }
     const fh = await dir.getFileHandle(name, { create: true });
     const w = await fh.createWritable(); await w.write(blob); await w.close();
     return name;
@@ -504,15 +587,15 @@ SCENE R6: A council of viziers ...</pre>
     return new Promise((r, j) => c.toBlob((b) => (b ? r(b) : j(new Error('png convert failed'))), 'image/png'));
   }
 
+  const dlPath = (project, fname) => `${safe(S.settings[rootKey] || DEFAULTS[rootKey])}/${S.settings.projSub ? safe(project) + '/' : ''}${fname}`;
   // blob: PNG blob (or null -> fall back to the image URL)
-  async function saveBlobOut(blob, fallbackUrl, project, base) {
-    const fname = base + '.png';
+  async function saveBlobOut(blob, fallbackUrl, project, base, ext = 'png') {
+    const fname = base + '.' + ext;
     if (S.settings.dest === 'picker') {
       if (blob && (await dirPerm(false))) { await writeToDir(blob, project, fname); return; }
       setStatus('⚠ No folder permission — saving to Downloads instead (re-pick the folder in the Download tab)');
     }
-    const root = safe(S.settings.dlRoot || 'ChatGPT-Bulk');
-    const path = `${root}/${S.settings.projSub ? safe(project) + '/' : ''}${fname}`;
+    const path = dlPath(project, fname);
     const url = blob ? await blobToDataUrl(blob) : fallbackUrl;
     const r = await chrome.runtime.sendMessage({ type: 'download', url, filename: path });
     if (!r || !r.ok) throw new Error('Download failed: ' + (r && r.error));
@@ -590,6 +673,7 @@ SCENE R6: A council of viziers ...</pre>
   }
 
   async function processItem(p, it) {
+    if (IS_FLOW) return processItemFlow(p, it);
     const resume = it.status === 'sending';
     const before = new Set(allImgSrcs());
     const uCount = qa(CFG.user).length;
@@ -640,16 +724,342 @@ SCENE R6: A council of viziers ...</pre>
     finally { clearInterval(hb); looping = false; mon('Monitor: idle'); await save(); render(); }
   }
 
+
+  // ---------- Google Flow ----------
+  const norm = (t) => (t || '').replace(/\s+/g, ' ').trim();
+  const ovl = () => document.querySelector('.cdk-overlay-container');
+  const radios = () => [...(ovl() ? ovl().querySelectorAll('button[role="radio"]') : [])];
+  const radioBy = (l) => radios().find((b) => (' ' + norm(b.innerText)).endsWith(' ' + l));
+  const isOn = (b) => !!b && b.getAttribute('aria-checked') === 'true';
+  const cleanModel = (t) => norm(t).replace(/[^\x00-\x7F]/g, '').replace(/arrow_drop_down/g, '').replace(/\(?Leaving.*$/i, '').trim();
+  const flowPill = () => document.querySelector('button[aria-label="Settings trigger"]');
+
+  async function flowSetRadio(label) {
+    let b = radioBy(label);
+    if (!b) throw new Error(`option "${label}" is not available in Flow's settings`);
+    for (let i = 0; i < 3 && !isOn(b); i++) { b.click(); await sleep(600); b = radioBy(label) || b; }
+    if (!isOn(b)) throw new Error(`could not select "${label}"`);
+  }
+  async function flowSetModel(name) {
+    const mb = ovl().querySelector('button[aria-label="Select model family"]');
+    if (!mb) throw new Error('model selector not found');
+    if (cleanModel(mb.innerText).toLowerCase() === name.toLowerCase()) return;
+    mb.click();
+    const items = await waitFor(() => { const a = qa('.mat-mdc-menu-panel [role="menuitem"]'); return a.length ? a : null; }, 4000, 'model list');
+    const want = name.toLowerCase();
+    const it = items.find((e) => cleanModel(e.innerText).toLowerCase() === want) || items.find((e) => cleanModel(e.innerText).toLowerCase().includes(want));
+    if (!it) { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); throw new Error(`model "${name}" is not in Flow's list`); }
+    it.click(); await sleep(700);
+  }
+  async function flowApplySettings() {
+    const f = S.settings.flow, vid = f.mode === 'video';
+    const pill = await waitFor(flowPill, 15000, 'Flow settings button');
+    if (!radios().length) { pill.click(); await waitFor(() => radios().length, 5000, 'settings panel'); }
+    try {
+      await flowSetRadio(vid ? 'Video' : 'Image'); await sleep(500);
+      if (vid) await flowSetRadio(f.input === 'ingredients' ? 'Ingredients' : 'Frames');
+      await flowSetRadio(f.aspect);
+      const m = vid ? f.videoModel : f.imageModel;
+      if (m) await flowSetModel(m);
+      await flowSetRadio('x' + f.outputs);
+    } finally {
+      const pl = flowPill(); if (pl && radios().length) { pl.click(); await sleep(600); }
+      if (radios().length) { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await sleep(500); }
+    }
+    return norm(flowPill() ? flowPill().innerText : '').replace(/[a-z]+_[a-z0-9_]+/g, '').trim() || 'ok';
+  }
+  function flowPillOk() {
+    const f = S.settings.flow, t = norm(flowPill() ? flowPill().innerText : '').toLowerCase();
+    if (!t) return false;
+    if ((f.mode === 'video') !== t.startsWith('video')) return false;
+    if (!t.endsWith('x' + f.outputs)) return false;
+    const m = f.mode === 'video' ? f.videoModel : f.imageModel;
+    if (f.mode === 'image' && m && !t.includes(m.toLowerCase())) return false;
+    return true;
+  }
+
+  function flowTiles() {
+    return qa('flow-image-tile, flow-video-tile').map((el) => {
+      const video = el.tagName === 'FLOW-VIDEO-TILE', v = el.querySelector('video'), im = el.querySelector('img');
+      const url = video ? (v && (v.currentSrc || v.src || (v.querySelector('source') || {}).src)) || '' : (im && im.src) || '';
+      const pend = !!el.querySelector('flow-pending-tile'), err = !!el.querySelector('flow-error-tile');
+      const ready = video ? !!url : !!(im && im.complete && im.naturalWidth > 0);
+      return { el, kind: video ? 'video' : 'image', media: video ? v : im, url, pend, err, ready, text: norm(el.innerText) };
+    });
+  }
+  const flowSnap = () => { const t = flowTiles(); return { els: new Set(t.map((x) => x.el)), urls: new Set(t.map((x) => x.url).filter(Boolean)), n: t.length }; };
+  function flowFresh(snap) {
+    const t = flowTiles();
+    let fresh = t.filter((x) => !snap.els.has(x.el) && !(x.url && snap.urls.has(x.url)));
+    if (!fresh.length && t.length > snap.n) fresh = t.slice(0, t.length - snap.n);
+    return fresh;
+  }
+  const FLOW_LIMIT_RE = /quota|out of credits|not enough credits|insufficient|too many|rate limit|limit/i;
+
+  async function waitResultFlow(snap, expected, resume) {
+    const max = S.settings.maxWaitMin * 60000, t0 = Date.now();
+    let started = resume, lastSig = '', lastChange = Date.now(), retried = false, warned = false;
+    while (Date.now() - t0 < max) {
+      if (/unusual activity/i.test(document.body.innerText || '')) return { block: 'Flow shows "unusual activity" and blocked the request — wait a while, reload Flow and use it manually before resuming' };
+      const fresh = flowFresh(snap);
+      const pend = fresh.filter((x) => x.pend), errs = fresh.filter((x) => x.err);
+      const ok = fresh.filter((x) => !x.pend && !x.err && x.ready && x.url);
+      const ed = q(CFG.editor), edText = ed ? ed.innerText.trim() : '';
+      const sig = fresh.map((x) => `${x.kind}|${x.url}|${x.pend}|${x.err}`).join(';');
+      if (sig !== lastSig) { lastSig = sig; lastChange = Date.now(); }
+      const stable = Math.round((Date.now() - lastChange) / 1000);
+      const pct = pend.map((x) => (x.text.match(/(\d+)%/) || [])[1]).filter(Boolean).join('/');
+      mon(`Pending: ${pend.length}${pct ? ' (' + pct + '%)' : ''} · Ready: ${ok.length}/${expected} · Failed: ${errs.length} · Stable: ${stable}s · Started: ${started ? 'yes' : 'no'} · Time: ${Math.round((Date.now() - t0) / 1000)}s`);
+      if (skipNow) { skipNow = false; return ok.length ? { tiles: ok } : { skipped: true }; }
+      if (!started && (fresh.length || (ed && edText === ''))) started = true;
+      if (started) {
+        if (resume && !pend.length && stable >= 5) return { resumed: true };
+        if (!resume && !pend.length && ok.length + errs.length > 0 && stable >= 4 && (ok.length + errs.length >= expected || stable >= 15)) {
+          if (ok.length) { await sleep(1500); return { tiles: flowFresh(snap).filter((x) => !x.pend && !x.err && x.ready && x.url) }; }
+          const text = errs[0].text.slice(0, 160); return { text, limit: FLOW_LIMIT_RE.test(text) };
+        }
+      } else {
+        if (!retried && Date.now() - t0 > 20000 && edText) { retried = true; await clickSend(); }
+        if (edText && Date.now() - t0 > 28000 && !warned) { warned = true; setStatus('⚠ Flow ignored the automated Send click — please click the Send arrow in Flow once; the run continues by itself'); beep(); }
+        if (Date.now() - t0 > (edText ? 240000 : 45000)) throw new Error('Prompt was not sent');
+      }
+      await sleep(1000);
+    }
+    throw new Error('Timeout — Flow did not finish in time');
+  }
+
+  async function saveVideoOut(url, project, base) {
+    const fname = base + '.mp4';
+    if (S.settings.dest === 'picker') {
+      if (await dirPerm(false)) {
+        try { const r = await fetch(url, { credentials: 'include' }); if (!r.ok) throw new Error('http ' + r.status); await writeToDir(await r.blob(), project, fname); return; }
+        catch (e) { setStatus('⚠ Could not read the video in the page — saving to Downloads instead'); }
+      } else setStatus('⚠ No folder permission — saving to Downloads instead');
+    }
+    let dl = url;
+    if (url.startsWith('blob:')) dl = await blobToDataUrl(await (await fetch(url)).blob());
+    const r = await chrome.runtime.sendMessage({ type: 'download', url: dl, filename: dlPath(project, fname) });
+    if (!r || !r.ok) throw new Error('Download failed: ' + (r && r.error));
+  }
+  const flowMenuBtns = () => qa('.mat-mdc-menu-panel button[role="menuitem"]');
+  async function closeFlowMenus() {
+    for (let i = 0; i < 3 && flowMenuBtns().length; i++) {
+      const bd = document.querySelector('.cdk-overlay-backdrop'); if (bd) bd.click();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await sleep(500);
+    }
+  }
+  // Use the tile's own Download menu (e.g. 1080p upscaled); the background script renames the file Chrome saves.
+  async function flowMenuDownload(t, quality, project, base) {
+    const path = dlPath(project, base + (quality === '270p' ? '.gif' : '.mp4'));
+    await closeFlowMenus();
+    let dl = null;
+    for (let i = 0; i < 3 && !dl; i++) {
+      t.el.scrollIntoView({ block: 'center' }); await sleep(300);
+      const r = t.el.getBoundingClientRect();
+      t.el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2, clientX: r.x + r.width / 2, clientY: r.y + r.height / 2, view: window }));
+      try { dl = await waitFor(() => flowMenuBtns().find((b) => /\bdownload\b/i.test(b.innerText)), 3000, 'Download menu'); }
+      catch (e) { await closeFlowMenus(); }
+    }
+    if (!dl) throw new Error('tile menu did not open');
+    dl.click();
+    const opt = await waitFor(() => flowMenuBtns().find((b) => b.innerText.trim().startsWith(quality)), 3000, quality + ' option');
+    if (opt.disabled || opt.getAttribute('aria-disabled') === 'true') { await closeFlowMenus(); throw new Error(quality + ' is not available for this account'); }
+    const max = S.settings.maxWaitMin * 60000;
+    await chrome.runtime.sendMessage({ type: 'expectDownload', filename: path, timeout: max });
+    opt.click();
+    const t0 = Date.now();
+    for (;;) {
+      const st = await chrome.runtime.sendMessage({ type: 'dlStatus' });
+      const state = st && st.state;
+      mon(`Flow ${quality} download: ${state === 'started' ? 'downloading' : 'waiting for Flow to prepare the file'} · ${Math.round((Date.now() - t0) / 1000)}s`);
+      if (state === 'done') return;
+      if (state === 'error') throw new Error('Chrome download failed');
+      if (Date.now() - t0 > max) { await chrome.runtime.sendMessage({ type: 'clearPending' }); throw new Error('Flow did not start the download in time'); }
+      await sleep(2000);
+    }
+  }
+
+  async function saveFlowTile(t, project, base) {
+    if (t.kind === 'video') {
+      const qual = S.settings.flow.videoQuality || '1080p';
+      if (qual !== 'direct') {
+        try { return await flowMenuDownload(t, qual, project, base); }
+        catch (e) { setStatus(`⚠ ${qual} menu download failed (${e.message}) — saving the direct file instead`); await closeFlowMenus(); }
+      }
+      return saveVideoOut(t.url, project, base);
+    }
+    let blob = null;
+    try { blob = await imgToPng(t.media); } catch (e) { /* URL fallback */ }
+    return saveBlobOut(blob, t.url, project, base);
+  }
+
+  async function processItemFlow(p, it) {
+    const resume = it.status === 'sending', f = S.settings.flow;
+    if (!resume && f.apply && !flowPillOk()) {
+      try { setStatus('Applying Flow settings…'); await flowApplySettings(); }
+      catch (e) { it.msg = 'Settings: ' + e.message; S.run.running = false; setStatus('Stopped: could not apply Flow settings — ' + e.message); await save(); render(); return; }
+    }
+    const snap = flowSnap();
+    if (!resume) {
+      it.status = 'sending'; it.msg = ''; await save(); render();
+      const full = [p.prefix, it.text, p.suffix].filter((x) => x && x.trim()).join(' ');
+      try { await fillPrompt(full); await clickSend(); }
+      catch (e) { it.status = 'error'; it.msg = e.message; await save(); render(); return; }
+    }
+    setStatus(`Generating: ${it.label}`);
+    try {
+      const res = await waitResultFlow(snap, f.outputs || 1, resume);
+      if (res.block) { it.status = 'pending'; it.msg = res.block.slice(0, 120); S.run.running = false; setStatus('Stopped: ' + res.block); }
+      else if (res.resumed) { it.status = 'done'; it.msg = 'resumed — download skipped'; }
+      else if (res.skipped) { it.status = 'done'; it.msg = 'skipped manually'; }
+      else if (res.tiles && res.tiles.length) {
+        if (S.settings.autoDownload) {
+          const base = baseName(it.text, p.items.indexOf(it), p.items.length);
+          for (let k = 0; k < res.tiles.length; k++) await saveFlowTile(res.tiles[k], p.name, res.tiles.length > 1 ? `${base}_${k + 1}` : base);
+        }
+        it.status = 'done'; it.msg = res.tiles.length < (f.outputs || 1) ? `only ${res.tiles.length}/${f.outputs} outputs arrived` : '';
+        setStatus(`✅ ${it.label} done`); beep();
+      } else if (res.limit && S.settings.pauseOnLimit) {
+        it.status = 'pending'; it.msg = 'Limit: ' + res.text.slice(0, 80); S.run.running = false;
+      } else { it.status = 'error'; it.msg = (res.text || 'Flow returned nothing').slice(0, 120); }
+    } catch (e) { it.status = 'error'; it.msg = e.message; }
+    await save(); render();
+  }
+
+  async function downloadAllFlow() {
+    if (S.settings.dest === 'picker' && !(await dirPerm(true))) return setStatus('Choose a folder and grant permission first');
+    const tiles = flowTiles().filter((x) => !x.pend && !x.err && x.ready && x.url).reverse();
+    if (!tiles.length) return setStatus('No finished images or videos found on this page');
+    const name = safe(document.title.replace(/\s*[-–]\s*Flow.*$/i, '')) || 'Flow';
+    let ok = 0;
+    for (let i = 0; i < tiles.length; i++) {
+      setStatus(`Saving ${i + 1}/${tiles.length}…`);
+      try { await saveFlowTile(tiles[i], name, 'flow_' + String(i + 1).padStart(Math.max(2, String(tiles.length).length), '0')); ok++; } catch (e) { log('Failed: ' + e.message); }
+    }
+    setStatus(`✅ Saved ${ok}/${tiles.length} files`); beep();
+  }
+
+
+  // ---------- MCP bridge (commands arrive from background.js) ----------
+  const MCP_KEY = 'bpi_mcp', MCP_ST = 'bpi_mcp_state';
+  let mcpCfg = { enabled: false, port: 8765, token: '' };
+  const MCP_LABEL = { off: 'Off', connecting: 'Connecting…', on: '✅ Connected to the MCP server', err: 'Waiting for the MCP server (is it running?)', denied: 'Token rejected by the server' };
+  async function mcpLoadCfg() {
+    try { const d = await chrome.storage.local.get([MCP_KEY, MCP_ST]); mcpCfg = { ...mcpCfg, ...(d[MCP_KEY] || {}) }; $('#mcpState').textContent = MCP_LABEL[d[MCP_ST]] || 'Off'; } catch (e) { /* ignore */ }
+    $('#mcpOn').checked = mcpCfg.enabled; $('#mcpPort').value = mcpCfg.port; $('#mcpTok').value = mcpCfg.token || '';
+  }
+  const mcpSave = () => chrome.storage.local.set({ [MCP_KEY]: mcpCfg });
+  $('#mcpOn').onchange = (e) => { mcpCfg.enabled = e.target.checked; mcpSave(); };
+  $('#mcpPort').onchange = (e) => { mcpCfg.port = Math.min(65535, Math.max(1024, +e.target.value || 8765)); mcpSave(); };
+  $('#mcpTok').onchange = (e) => { mcpCfg.token = e.target.value.trim(); mcpSave(); };
+  try { chrome.storage.onChanged.addListener((ch, area) => { if (area === 'local' && ch[MCP_ST]) $('#mcpState').textContent = MCP_LABEL[ch[MCP_ST].newValue] || 'Off'; }); } catch (e) { /* ignore */ }
+
+  const findProj = (a) => {
+    if (!a) return active();
+    const k = String(a).toLowerCase();
+    const p = S.projects.find((x) => x.id === a) || S.projects.find((x) => x.name.toLowerCase() === k) || S.projects.find((x) => x.name.toLowerCase().includes(k));
+    if (!p) throw new Error(`Project "${a}" not found`);
+    return p;
+  };
+  const counts = (p) => { const c = { total: 0, pending: 0, sending: 0, done: 0, error: 0 }; if (p) for (const i of p.items) { c.total++; c[i.status]++; } return c; };
+  const pubItem = (it, n) => ({ index: n + 1, label: it.label, status: it.status, message: it.msg || '', prompt: it.text.length > 240 ? it.text.slice(0, 240) + '…' : it.text });
+  const BOOL = ['autoDownload', 'pauseOnLimit', 'sound', 'serial', 'projSub'];
+
+  async function mcpHandle(cmd, a) {
+    if (!S.run.running) await load(); // pick up changes made in another tab
+    switch (cmd) {
+      case 'status': {
+        const p = proj(S.run.projectId) || active();
+        const cur = p && (p.items.find((i) => i.status === 'sending') || p.items.find((i) => i.status === 'pending'));
+        const { dlRoot, dlRootFlow, delay, maxWaitMin, autoDownload, pauseOnLimit, serial, projSub, dest } = S.settings;
+        return {
+          platform: IS_FLOW ? 'flow' : 'chatgpt', url: location.href, version: chrome.runtime.getManifest().version,
+          running: !!(S.run.running && looping) || !!S.run.running, project: p ? p.name : null, counts: counts(p),
+          currentItem: cur ? pubItem(cur, p.items.indexOf(cur)) : null,
+          monitor: $('#mon').textContent, status: $('#status').textContent, recentLog: logs.slice(-15).map((l) => `${l.t} ${l.m}`),
+          settings: { delay, maxWaitMin, autoDownload, pauseOnLimit, serial, projSub, dest, downloadFolder: IS_FLOW ? dlRootFlow : dlRoot, ...(IS_FLOW ? { flow: S.settings.flow } : {}) },
+        };
+      }
+      case 'list_projects': return S.projects.map((p) => ({ id: p.id, name: p.name, active: p.id === S.activeId, targetUrl: p.targetUrl || '', prefix: p.prefix || '', suffix: p.suffix || '', ...counts(p) }));
+      case 'get_items': {
+        const p = findProj(a.project);
+        if (!p) throw new Error('No project');
+        return p.items.map(pubItem).filter((i) => !a.status || i.status === a.status);
+      }
+      case 'import_prompts': {
+        const items = bpiParse(String(a.text || ''));
+        if (!items.length) throw new Error('No prompts found in that text');
+        let p;
+        if (a.mode === 'add') { p = findProj(a.project); if (!p) throw new Error('Create a project first (mode "new")'); p.items.push(...mkItems(items)); }
+        else {
+          p = { id: uid(), name: (a.name || '').trim() || 'Project ' + (S.projects.length + 1), targetUrl: a.targetUrl || '', prefix: a.prefix || '', suffix: a.suffix || '', items: mkItems(items) };
+          S.projects.push(p); S.activeId = p.id;
+        }
+        await save(); render(); setStatus(`MCP: imported ${items.length} prompts → "${p.name}"`);
+        return { project: p.name, imported: items.length, ...counts(p) };
+      }
+      case 'update_project': {
+        const p = findProj(a.project);
+        if (!p) throw new Error('No project');
+        for (const k of ['name', 'prefix', 'suffix', 'targetUrl']) if (typeof a[k] === 'string') p[k] = k === 'name' ? a[k].trim() || p.name : a[k];
+        if (a.makeActive) S.activeId = p.id;
+        await save(); render(); return { ok: true, project: p.name };
+      }
+      case 'delete_project': {
+        const p = findProj(a.project);
+        if (S.run.running && S.run.projectId === p.id) throw new Error('Pause the run before deleting this project');
+        S.projects = S.projects.filter((x) => x.id !== p.id); if (S.activeId === p.id) S.activeId = S.projects[0] ? S.projects[0].id : null;
+        await save(); render(); return { deleted: p.name };
+      }
+      case 'start': {
+        if (a.project) { S.activeId = findProj(a.project).id; }
+        const name = await startRun(true); setStatus('MCP: started "' + name + '"'); return { started: name };
+      }
+      case 'pause': S.run.running = false; await save(); render(); setStatus('MCP: will pause after the current prompt…'); return { ok: true };
+      case 'skip': skipNow = true; setStatus('MCP: skip pressed'); return { ok: true };
+      case 'retry_errors': { const p = findProj(a.project); let n = 0; p.items.forEach((i) => { if (i.status === 'error') { i.status = 'pending'; i.msg = ''; n++; } }); await save(); render(); return { reset: n }; }
+      case 'reset': { const p = findProj(a.project); if (S.run.running && S.run.projectId === p.id) throw new Error('Pause the run first'); p.items.forEach((i) => { i.status = 'pending'; i.msg = ''; }); await save(); render(); return { reset: p.items.length }; }
+      case 'set_settings': {
+        const st = S.settings, ch = {};
+        for (const k of ['delay', 'maxWaitMin']) if (Number.isFinite(a[k])) { st[k] = Math.max(1, Math.round(a[k])); ch[k] = st[k]; }
+        for (const k of BOOL) if (typeof a[k] === 'boolean') { st[k] = a[k]; ch[k] = a[k]; }
+        for (const k of ['dlRoot', 'dlRootFlow']) if (typeof a[k] === 'string' && a[k].trim()) { st[k] = a[k].trim(); ch[k] = st[k]; }
+        await save(); render(); return { changed: ch };
+      }
+      case 'set_flow_settings': {
+        const f = S.settings.flow, ch = {};
+        for (const k of ['mode', 'input', 'aspect', 'imageModel', 'videoModel', 'videoQuality']) if (typeof a[k] === 'string') { f[k] = a[k]; ch[k] = a[k]; }
+        if (Number.isFinite(a.outputs)) { f.outputs = Math.min(4, Math.max(1, Math.round(a.outputs))); ch.outputs = f.outputs; }
+        if (typeof a.apply === 'boolean') { f.apply = a.apply; ch.apply = a.apply; }
+        if (f.mode === 'video' && !['16:9', '9:16'].includes(f.aspect)) f.aspect = '16:9';
+        await save(); render();
+        if (a.applyNow) {
+          if (!IS_FLOW) throw new Error('Settings saved, but applying them needs a Google Flow tab (use platform "flow").');
+          if (S.run.running) throw new Error('Settings saved. Not applied now because a run is in progress — they apply on the next Start.');
+          ch.appliedAs = await flowApplySettings();
+        }
+        return { changed: ch, flow: f };
+      }
+      case 'download_all': if (IS_FLOW) await downloadAllFlow(); else await downloadAllInChat(); return { status: $('#status').textContent };
+      default: throw new Error('Unknown command: ' + cmd);
+    }
+  }
+  chrome.runtime.onMessage.addListener((m, _s, send) => {
+    if (!m || m.type !== 'mcp') return;
+    mcpHandle(m.cmd, m.args || {}).then((r) => send({ ok: true, result: r }), (e) => send({ ok: false, error: String((e && e.message) || e) }));
+    return true;
+  });
+
   // ---------- init ----------
   (async () => {
     try { shadow.querySelector('.t2').textContent += ' · v' + chrome.runtime.getManifest().version; } catch (e) {}
-    await load(); try { dirHandle = (await idbGet('dir')) || null; } catch (e) { dirHandle = null; }
+    await load(); mcpLoadCfg(); try { dirHandle = (await idbGet('dir')) || null; } catch (e) { dirHandle = null; }
     render();
     if (S.run.running) { // resume after a page reload/navigation
       await sleep(6000);
       const d = await chrome.storage.local.get(['bpi', 'bpi_hb']);
       if (d.bpi && d.bpi.run && d.bpi.run.running && Date.now() - (d.bpi_hb || 0) > 5000) {
-        S = { ...S, ...d.bpi, settings: { ...DEFAULTS, ...d.bpi.settings } };
+        S = { ...S, ...d.bpi, settings: mergeSettings(d.bpi.settings) };
         $('#panel').classList.add('open'); render(); runLoop();
       }
     }

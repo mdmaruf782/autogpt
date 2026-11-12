@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+mcp-server/node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local env and secrets
+.env
+.env.*
+
+# Packaged extension builds
+*.zip
+*.crx
+*.pem
